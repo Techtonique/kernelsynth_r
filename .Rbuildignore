@@ -1,0 +1,10 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^Makefile$
+^LICENSE\.md$
+^README\.md$
+^\.github$
+^docs$
+^_pkgdown\.yml$
+^\.DS_Store$
+^NOTICE$

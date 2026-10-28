@@ -1,0 +1,130 @@
+---
+title: "Synthetic time series for pretraining and meta-learning with kernelsynth"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Synthetic time series for pretraining and meta-learning with kernelsynth}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 5)
+```
+
+```{r}
+library(kernelsynth)
+```
+
+## 1. The original KernelSynth
+
+`generate_time_series()` is a line-by-line port of Chronos' `kernel-synth.py`:
+up to `max_kernels` kernels are drawn from the original bank of 33 kernels,
+combined with random `+`/`*`, and a path is sampled from the GP prior.
+
+```{r}
+set.seed(123)
+y <- generate_time_series(max_kernels = 5, length = 512)
+attr(y, "kernel")
+plot(y)
+```
+
+## 2. Kernel algebra
+
+Kernels follow scikit-learn's parameterization and can be combined freely.
+Inputs live on [0, 1], so a period of `P` steps in a series of length `n`
+is `P / (n - 1)`.
+
+```{r}
+n <- 240
+k <- exp_sine_squared(periodicity = 12 / (n - 1)) * rbf(0.5) +
+  0.5 * dot_product(0) + white_kernel(0.01)
+k
+y <- simulate(k, length = n, frequency = 12, start = c(2000, 1), seed = 1)
+plot(y)
+
+# changepoint: smooth regime, then seasonal regime
+kc <- changepoint(matern(0.1, 1.5), exp_sine_squared(7 / (n - 1)), location = 0.5)
+plot(simulate(kc, length = n, frequency = 7, seed = 2))
+```
+
+## 3. The enriched generator
+
+`kernel_synth()` adds, on top of the original algorithm:
+
+* a **frequency-aware extended bank** (periods aligned with the `ts`
+  frequency; Matern, Brownian, polynomial, spectral mixture, locally
+  periodic kernels), with **random hyperparameters**;
+* **changepoint** combinations and **input warping** (non-stationarity);
+* **augmentations**: trends, level shifts, positivity / multiplicative
+  effects, intermittency, counts, heteroscedasticity, noise, outliers,
+  scaling, missing values;
+* variable lengths, multivariate series, reproducible parallel generation.
+
+```{r, fig.height = 7}
+ys <- kernel_synth(n = 9, length = c(100, 300), seed = 42)
+plot_series(ys)
+ks_info(ys[[1]])
+```
+
+Augmentation probabilities are set with `augmentation_control()`:
+
+```{r}
+ctrl <- augmentation_control(missing = 0.2, counts = 0.2, scale = 0)
+ys2 <- kernel_synth(n = 4, length = 120, frequency = 12, control = ctrl, seed = 7)
+sapply(ys2, function(y) paste(attr(y, "augmentations"), collapse = ","))
+```
+
+Multivariate series (linear model of coregionalization):
+
+```{r}
+mv <- kernel_synth(length = 168, frequency = 24, n_vars = 3, seed = 3)
+plot(mv)
+```
+
+The R6 interface stores a configuration and yields reproducible batches:
+
+```{r}
+gen <- KernelSynth$new(length = 144, frequency = 12, seed = 2026)
+gen
+batch1 <- gen$generate(3)
+batch2 <- gen$generate(3)  # different series, still reproducible
+```
+
+## 4. Pretraining: TSMixup
+
+```{r}
+mixed <- ts_mixup(ys, n = 3, k_max = 3, alpha = 1.5, seed = 1)
+attr(mixed[[1]], "mixup")
+```
+
+## 5. Meta-learning: tasks and meta-features
+
+`make_tasks()` returns tasks in the `x` / `xx` / `h` format of
+'Mcomp' / 'M4metalearning', and `meta_features()` computes features that
+can serve as meta-learner inputs or to check the diversity of a corpus.
+
+```{r}
+corpus <- kernel_synth(n = 30, length = 120, frequency = 12, seed = 11)
+tasks <- make_tasks(corpus, h = 12)
+str(tasks[[1]][c("x", "xx", "h", "period")])
+
+mf <- meta_features(corpus)
+head(round(mf[, c("acf1", "trend_strength", "seasonal_strength",
+                  "spectral_entropy")], 3))
+plot(mf$trend_strength, mf$seasonal_strength, pch = 19,
+     xlab = "trend strength", ylab = "seasonal strength")
+```
+
+A minimal meta-learning loop: pick, for each task, the better of two simple
+forecasters, and relate the choice to the meta-features.
+
+```{r}
+mase_like <- function(f, task) mean(abs(f - task$xx)) / mean(abs(diff(task$x)))
+best <- sapply(tasks, function(tk) {
+  e_naive <- mase_like(rep(tail(tk$x, 1), tk$h), tk)
+  e_snaive <- mase_like(rep(tail(tk$x, 12), length.out = tk$h), tk)
+  if (e_snaive < e_naive) "snaive" else "naive"
+})
+table(best)
+tapply(mf$seasonal_strength, best, mean)
+```

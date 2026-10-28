@@ -1,0 +1,19 @@
+kernelsynth
+Copyright (c) 2026 T. Moudiki
+
+This software contains code derived from the KernelSynth script of
+Chronos (https://github.com/amazon-science/chronos-forecasting,
+scripts/kernel-synth.py), Copyright Amazon.com, Inc. or its affiliates.
+All Rights Reserved. Licensed under the Apache License, Version 2.0
+(http://www.apache.org/licenses/LICENSE-2.0).
+
+Derived parts: the kernel bank (kernel_bank_chronos), random_binary_map,
+GP prior sampling (sample_gp_prior) and generate_time_series. Kernel
+definitions follow the parameterization of scikit-learn
+(https://scikit-learn.org/, BSD 3-Clause License).
+
+KernelSynth and Chronos are the work of Abdul Fatir Ansari, Lorenzo Stella, Caner Turkmen, Xiyuan Zhang, Pedro Mercado, Huibin Shen, Oleksandr Shchur, Syama Sundar Rangapuram, Sebastian Pineda Arango, Shubham Kapoor, Jasper Zschiegner, Danielle C. Maddix, Hao Wang, Michael W. Mahoney, Kari Torkkola, Andrew Gordon Wilson, Michael Bohlke-Schneider, Yuyang Wang.
+
+The TSMixup augmentation (ts_mixup) follows the description in:
+Ansari et al. (2024), "Chronos: Learning the Language of Time Series",
+Transactions on Machine Learning Research.

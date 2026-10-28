@@ -1,0 +1,45 @@
+Package: kernelsynth
+Type: Package
+Title: Diverse Synthetic Time Series from Random Gaussian Process Kernel Compositions
+Version: 0.1.0
+Authors@R: c(
+    person("T.", "Moudiki", email = "thierry.moudiki@gmail.com",
+           role = c("aut", "cre")),
+    person("Abdul Fatir", "Ansari", role = "ctb",
+           comment = "KernelSynth / Chronos author"),
+    person("Lorenzo", "Stella", role = "ctb",
+           comment = "KernelSynth / Chronos author"),
+    person("Caner", "Turkmen", role = "ctb",
+           comment = "KernelSynth / Chronos author"),
+    person("Amazon.com, Inc. or its affiliates", role = "cph",
+           comment = "Original KernelSynth script (Chronos), Apache-2.0"))
+Description: An R port and extension of 'KernelSynth', the synthetic data
+    generator used to pretrain the 'Chronos' forecasting models
+    (Ansari et al., 2024, <doi:10.48550/arXiv.2403.07815>). Time series are
+    drawn from Gaussian process priors whose covariance is a random
+    composition (sums, products, changepoints) of base kernels. On top of
+    the original kernel bank, the package offers a frequency-aware extended
+    bank (Matern, Brownian, polynomial, spectral mixture, locally periodic
+    kernels), randomized hyperparameters, input warping, a library of
+    augmentations (trends, level shifts, heteroscedasticity, outliers,
+    positivity, intermittency, counts, missing values), multivariate series
+    via a linear model of coregionalization, 'TSMixup', train/test task
+    splits and meta-features for meta-learning. All generators return
+    'ts' objects. S3 and R6 interfaces are provided.
+License: MIT + file LICENSE
+URL: https://github.com/Techtonique/kernelsynth_r
+BugReports: https://github.com/Techtonique/kernelsynth_r/issues
+Encoding: UTF-8
+Imports:
+    R6,
+    stats,
+    graphics,
+    parallel
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
